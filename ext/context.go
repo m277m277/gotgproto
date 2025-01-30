@@ -814,17 +814,16 @@ func (ctx *Context) DownloadMedia(media tg.MessageMediaClass, downloadOutput Dow
 	return downloadOutput.run(ctx, d)
 }
 
-func (ctx *Context) TransferStarGift(chatId int64, msgId int) (tg.UpdatesClass, error) {
-	peerUser := ctx.PeerStorage.GetPeerById(chatId)
+// TransferStarGift is used to transfer a star gift to a chat.
+// Returns tg.UpdatesClass and error if any.
+func (ctx *Context) TransferStarGift(chatId int64, starGift tg.InputSavedStarGiftClass) (tg.UpdatesClass, error) {
+	peerUser := ctx.PeerStorage.GetInputPeerById(chatId)
 	if peerUser == nil {
 		return nil, mtp_errors.ErrPeerNotFound
 	}
 	upd, err := ctx.Raw.PaymentsTransferStarGift(ctx, &tg.PaymentsTransferStarGiftRequest{
-		MsgID: msgId,
-		ToID: &tg.InputUser{
-			UserID:     peerUser.ID,
-			AccessHash: peerUser.AccessHash,
-		},
+		ToID:     peerUser,
+		Stargift: starGift,
 	})
 	if err != nil {
 		return nil, err
