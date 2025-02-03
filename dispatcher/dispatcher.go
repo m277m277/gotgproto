@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"runtime/debug"
+	"sync"
 
 	"github.com/celestix/gotgproto/ext"
 	"github.com/celestix/gotgproto/storage"
@@ -49,8 +50,8 @@ type NativeDispatcher struct {
 	handlerMap map[int][]Handler
 	// handlerGroups is used for internal functionality of NativeDispatcher.
 	handlerGroups []int
-
-	pStorage *storage.PeerStorage
+	pStorage      *storage.PeerStorage
+	initwg        sync.WaitGroup
 }
 
 type PanicHandler func(*ext.Context, *ext.Update, string)
@@ -61,7 +62,7 @@ func NewNativeDispatcher(setReply bool, setEntireReplyChain bool, eHandler Error
 	if eHandler == nil {
 		eHandler = defaultErrorHandler
 	}
-	return &NativeDispatcher{
+	nd := &NativeDispatcher{
 		pStorage:            p,
 		handlerMap:          make(map[int][]Handler),
 		handlerGroups:       make([]int, 0),
@@ -70,6 +71,8 @@ func NewNativeDispatcher(setReply bool, setEntireReplyChain bool, eHandler Error
 		Error:               eHandler,
 		Panic:               pHandler,
 	}
+	nd.initwg.Add(1)
+	return nd
 }
 
 func defaultErrorHandler(_ *ext.Context, _ *ext.Update, err string) error {
@@ -91,10 +94,12 @@ func (dp *NativeDispatcher) Initialize(ctx context.Context, cancel context.Cance
 	dp.sender = message.NewSender(dp.client)
 	dp.self = self
 	dp.cancel = cancel
+	dp.initwg.Done()
 }
 
 // Handle function handles all the incoming updates, map entities and dispatches updates for further handling.
 func (dp *NativeDispatcher) Handle(ctx context.Context, updates tg.UpdatesClass) error {
+	dp.initwg.Wait()
 	var (
 		e    entities
 		upds []tg.UpdateClass
