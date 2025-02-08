@@ -830,3 +830,15 @@ func (ctx *Context) TransferStarGift(chatId int64, starGift tg.InputSavedStarGif
 	}
 	return upd, err
 }
+
+func (ctx *Context) ExportInvoice(inputMedia tg.InputMediaClass) (*tg.PaymentsExportedInvoice, error) {
+	return ctx.Raw.PaymentsExportInvoice(ctx, inputMedia)
+}
+
+func (ctx *Context) SetPreCheckoutResults(success bool, queryId int64, err string) (bool, error) {
+	return ctx.Raw.MessagesSetBotPrecheckoutResults(ctx, &tg.MessagesSetBotPrecheckoutResultsRequest{
+		Success: success,
+		QueryID: queryId,
+		Error:   err,
+	})
+}
